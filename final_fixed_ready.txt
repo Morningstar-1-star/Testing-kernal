@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Omni-Vault OS V4.5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class', 
+            theme: { 
+                extend: { 
+                    borderRadius: { '4xl': '2rem', '5xl': '2.5rem' }, 
+                    animation: { 
+                        'float': 'float 6s ease-in-out infinite', 
+                        'pulse-glow': 'pulseGlow 2s infinite', 
+                        'spring-up': 'springUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'spring-pop': 'springPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'slide-down': 'slideDown 0.3s ease-out forwards'
+                    }, 
+                    keyframes: { 
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }, 
+                        pulseGlow: { '0%, 100%': { opacity: 1, transform: 'scale(1)' }, '50%': { opacity: 0.8, transform: 'scale(1.05)' } },
+                        springUp: { '0%': { transform: 'translateY(100%)', opacity: 0 }, '100%': { transform: 'translateY(0)', opacity: 1 } },
+                        springPop:
+                         { '0%': { transform: 'scale(0.8)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        slideDown: { '0%': { transform: 'translateY(-100%)', opacity: 0 }, '100%': { transform: 'translateY(0)', opacity: 1 } }
+                    } 
+                } 
+            } 
+        };
+    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        :root { --accent: #3b82f6; --blur: 24px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif; overscroll-behavior-y: none; user-select: none; -webkit-user-select: none; transition: background-color 0.4s ease; background-color: #000; }
+        .dark body { background: radial-gradient(circle at 50% 0%, #151522 0%, #000000 80%); background-attachment: fixed; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-panel { background: rgba(242, 242, 247, 0.75); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .dark .glass-panel { background: rgba(10, 10, 12, 0.75); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .app-container { max-width: 480px; margin: 0 auto; box-shadow: 0 0 50px rgba(0,0,0,0.4); height: 100dvh; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #F2F2F7; }
+        .dark .app-container { background: transparent; }
+        .hero-gradient { background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.95) 100%); }
+        .aura-glow { box-shadow: 0 0 25px -5px var(--accent); border: 1px solid var(--accent); }
+        
+        .bouncy-tap { transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275); will-change: transform; }
+        .bouncy-tap:active { transform: scale(0.88); }
+        
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 26px; width: 26px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-top: -10px; border: 3px solid var(--accent); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.3); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: linear-gradient(90deg, #ef4444 0%, #eab308 50%, #22c55e 100%); border-radius: 99px; }
+        .swipe-card { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, errorMsg: "" }; }
+            static getDerivedStateFromError(error) { return { hasError: true, errorMsg: error.toString() }; }
+            componentDidCatch(error, errorInfo) { console.error("App Crash Caught:", error, errorInfo); }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="h-screen w-full bg-red-900 text-white flex flex-col items-center justify-center p-8 text-center">
+                            <h1 className="text-4xl font-black mb-4">System Crash!</h1>
+                            <p className="text-sm font-bold mb-8 opacity-80">{this.state.errorMsg}</p>
+                            <button onClick={() => { sessionStorage.clear(); window.location.reload(); }} className="bg-white text-red-900 px-6 py-3 rounded-full font-black bouncy-tap">Clear Cache & Reboot OS</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        const DEFAULT_TMDB_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTU1ZmRiNDk3Zjc1NzVhMTQ0ZjI2YWRlYmNiZjk4MCIsIm5iZiI6MTc3NTcwNjIzNy43NDUsInN1YiI6IjY5ZDcyMDdkNmJiYTRiYzAzOTEwNjI2ZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ._4WdklzSx9za_YAGeMlABQ1jMEOPCLa6mEWtGQLqrw0";
+        const DEFAULT_TRAKT_CLIENT_ID = "9434714b83b9485c37a7865f58ad942ec7e1f64c372d0cf304f6ac882d307bb7";
+        const haptic = () => { if(navigator.vibrate) navigator.vibrate(40); };
+
+        const SVG = ({d, s=24, c="", fill="none", ...p}) => (
+            <svg width={s} height={s} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={c} {...p}>{d}</svg>
+        );
+
+        const Icon = {
+            Plus: (p) => <SVG d={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} {...p}/>,
+            Film: (p) => <SVG d={<><rect x="2" y="2" width="20" height="20" rx="4"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></>} {...p}/>,
+            Tv: (p) => <SVG d={<><rect x="2" y="7" width="20" height="15" rx="4"/><polyline points="17 2 12 7 7 2"/></>} {...p}/>,
+            Search: (p) => <SVG d={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} {...p}/>,
+            Grid: (p) => <SVG d={<><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/></>} {...p}/>,
+            List: (p) => <SVG d={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} {...p}/>,
+            Check: (p) => <SVG d={<polyline points="20 6 9 17 4 12"/>} {...p}/>,
+            X: (p) => <SVG d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} {...p}/>,
+            ChevronL: (p) => <SVG strokeWidth="3" d={<polyline points="15 18 9 12 15 6"/>} {...p}/>,
+            ChevronU: (p) => <SVG strokeWidth="3" d={<polyline points="18 15 12 9 6 15"/>} {...p}/>,
+            ChevronD: (p) => <SVG strokeWidth="3" d={<polyline points="6 9 12 15 18 9"/>} {...p}/>,
+            Play: (p) => <SVG d={<polygon points="5 3 19 12 5 21 5 3"/>} {...p}/>,
+            Collection: (p) => <SVG d={<><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14 2 14 8 20 8"/><path d="M2 15h10"/><path d="M9 18l3-3-3-3"/></>} {...p}/>,
+            Settings: (p) => <SVG d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} {...p}/>,
+            Loader: (p) => <SVG c={(p.c || "") + " animate-spin"} d={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} {...p}/>,
+            Trash: (p) => <SVG d={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} {...p}/>,
+            Sparkles: (p) => <SVG d={<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>} {...p}/>,
+            Chart: (p) => <SVG d={<><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></>} {...p}/>,
+            Compass: (p) => <SVG d={<><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></>} {...p}/>,
+            Tag: (p) => <SVG d={<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>} {...p}/>,
+            Save: (p) => <SVG d={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} {...p}/>
+        };
+
+        const FREE_AI_MODELS = [
+            { id: "deepseek/deepseek-r1:free", name: "DeepSeek R1 (Best)" },
+            { id: "google/gemini-2.0-flash-lite-preview-02-05:free", name: "Gemini 2.0 Flash Lite" },
+            { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
+            { id: "qwen/qwen-vl-plus:free", name: "Qwen VL Plus" },
+            { id: "mistralai/mistral-7b-instruct:free", name: "Mistral 7B" },
+            { id: "cognitivecomputations/dolphin3.0-r1-mistral-24b:free", name: "Dolphin 3.0" }
+        ];
+
+        const CATEGORIES = [
+            { id: 'movie', l: 'Movies', i: Icon.Film, c: 'text-blue-500', b: 'bg-blue-500/10' },
+            { id: 'tv', l: 'Series', i: Icon.Tv, c: 'text-indigo-500', b: 'bg-indigo-500/10' },
+            { id: 'anime', l: 'Anime', i: Icon.Sparkles, c: 'text-pink-500', b: 'bg-pink-500/10' }
+        ];
+
+        const GENRE_MAP = { "Action": 28, "Adventure": 12, "Animation": 16, "Comedy": 35, "Crime": 80, "Documentary": 99, "Drama": 18, "Family": 10751, "Fantasy": 14, "History": 36, "Horror": 27, "Music": 10402, "Mystery": 9648, "Romance": 10749, "Science Fiction": 878, "Sci-Fi": 878, "TV Movie": 10770, "Thriller": 53, "War": 10752, "Western": 37, "Kids": 10751 };
+        
+        const AVAILABLE_TABS = [
+            { id: 'explore', i: Icon.Compass, l: 'Explore' }, 
+            { id: 'library', i: Icon.Collection, l: 'Vault' }, 
+            { id: 'decks', i: Icon.Grid, l: 'Playlists' }, 
+            { id: 'stats', i: Icon.Chart, l: 'Stats' }, 
+            { id: 'settings', i: Icon.Settings, l: 'Settings' }
+        ];
+
+        const ExpandableText = ({ text, maxChars = 200 }) => {
+            const [expanded, setExpanded] = useState(false);
+            if (!text) return null;
+            if (text.length <= maxChars) return <p className="text-sm font-medium opacity-90 leading-relaxed mb-8">{text}</p>;
+            return (
+                <div className="mb-8">
+                    <p className="text-sm font-medium opacity-90 leading-relaxed inline">
+                        {expanded ? text : `${text.substring(0, maxChars)}...`}
+                    </p>
+                    <button onClick={() => setExpanded(!expanded)} className="text-accent font-black text-[10px] uppercase ml-2 px-2 py-1 bg-accent/10 rounded-lg bouncy-tap inline-block">
+                        {expanded ? "See Less" : "See More"}
+                    </button>
+                </div>
+            );
+        };
+
+        function useDebounce(value, delay) {
+            const [v, setV] = useState(value);
+            useEffect(() => { const h = setTimeout(() => setV(value), delay); return () => clearTimeout(h); }, [value, delay]);
+            return v;
+        }
+
+        const Toast = ({ msg, onClose }) => {
+            useEffect(() => { const t = setTimeout(onClose, 2500); return () => clearTimeout(t); }, []);
+            return (
+                <div className="absolute top-4 left-4 right-4 z-[110] bg-gray-900 text-white px-5 py-4 rounded-3xl shadow-2xl font-black text-sm flex justify-between items-center animate-slide-down border border-white/10">
+                    <span>{msg}</span><button onClick={onClose} className="bg-white/20 p-1.5 rounded-full bouncy-tap"><Icon.X s={14}/></button>
+                </div>
+            );
+        };
+
+        const SwipeCard = ({ item, onUpdate, onDelete, onOpen, children }) => {
+            const [offset, setOffset] = useState(0);
+            const startX = useRef(0);
+            const onTouchStart = e => { startX.current = e.touches[0].clientX; };
+            const onTouchMove = e => { const diff = e.touches[0].clientX - startX.current; if(Math.abs(diff) > 20 && Math.abs(diff) < 150) setOffset(diff); };
+            const onTouchEnd = () => { 
+                if (offset > 80) { haptic(); onUpdate(item.id, { status: 'completed' }); }
+                if (offset < -80) { haptic(); onDelete(item.id); }
+                setOffset(0); 
+            };
+            return (
+                <div className="relative overflow-hidden rounded-3xl shadow-sm bg-gray-100 dark:bg-[#151517]">
+                    <div className="absolute inset-0 flex justify-between items-center px-6 bg-gradient-to-r from-emerald-500 to-red-500">
+                        <Icon.Check s={24} c="text-white" /> <Icon.Trash s={24} c="text-white" />
+                    </div>
+                    <div className="bg-white dark:bg-[#151517] relative z-10 swipe-card cursor-pointer border border-black/5 dark:border-white/5 rounded-3xl h-full bouncy-tap" style={{ transform: `translateX(${offset}px)` }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onClick={() => onOpen(item)}>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const defaultSettings = { 
+                theme: 'dark', accent: '#3b82f6', layout: 'grid', gridSize: 2, adult: false, 
+                aiKey: '', aiModel: 'deepseek/deepseek-r1:free', 
+                tmdbKey: '', traktKey: '', jikanUrl: 'https://api.jikan.moe/v4',
+                region: 'US', language: 'en-US',
+                tabsOrder: ['explore', 'library', 'decks', 'stats', 'settings'],
+                customSources: [{ id: 'mod', name: "MoviesMod", url: "https://moviesmod.blue/?s={q}", domain: "moviesmod.blue" }] 
+            };
+            
+            const [settings, setSettings] = useState(() => {
+                const saved = JSON.parse(localStorage.getItem('omni16_settings')) || {};
+                return { ...defaultSettings, ...saved, customSources: saved.customSources || defaultSettings.customSources, tabsOrder: saved.tabsOrder || defaultSettings.tabsOrder };
+            });
+
+            const getTMDB = () => settings.tmdbKey?.trim() || DEFAULT_TMDB_TOKEN;
+            const getTrakt = () => settings.traktKey?.trim() || DEFAULT_TRAKT_CLIENT_ID;
+
+            const [vault, setVault] = useState(() => JSON.parse(localStorage.getItem('omni16_data')) || []);
+            const [playlists, setPlaylists] = useState(() => JSON.parse(localStorage.getItem('omni16_lists')) || [{ id: 'favs', name: "Masterpieces", icon: "💎", itemIds: [] }]);
+            
+            const [activeNav, setActiveNav] = useState('explore'); 
+            const [filterStatus, setFilterStatus] = useState('all');
+            const [internalQuery, setInternalQuery] = useState('');
+            const [globalTagFilter, setGlobalTagFilter] = useState(''); 
+            const [toast, setToast] = useState(null);
+
+            const [exploreData, setExploreData] = useState(() => {
+                const cached = sessionStorage.getItem('omni16_explore_cache');
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        if (Date.now() - parsed.ts < 3600000) return parsed.data; // 1 hr cache
+                    } catch(e) { sessionStorage.removeItem('omni16_explore_cache'); }
+                }
+                return { trending: [], popMovies: [], popTv: [], anime: [], extras: [] };
+            });
+            const [exploreLoading, setExploreLoading] = useState(false);
+            
+            const [addState, setAddState] = useState({ open: false, tab: 'search', query: '', results: [], loading: false });
+            const debSearch = useDebounce(addState.query, 400);
+            const searchCache = useRef({}); 
+            
+            const [bulkState, setBulkState] = useState({ input: '', results: [], loading: false, preview: false });
+            const [newPlaylistName, setNewPlaylistName] = useState("");
+            const [deckPickerOpen, setDeckPickerOpen] = useState(false); 
+
+            // Form inputs mapped from settings
+            const [aiInputKey, setAiInputKey] = useState(settings.aiKey || '');
+            const [aiModelInput, setAiModelInput] = useState(settings.aiModel || '');
+            const [aiTestResult, setAiTestResult] = useState(null);
+            
+            const [apiTmdbInput, setApiTmdbInput] = useState(settings.tmdbKey || '');
+            const [apiTraktInput, setApiTraktInput] = useState(settings.traktKey || '');
+
+            const [viewingItem, setViewingItem] = useState(null); 
+            const [inlineActionTab, setInlineActionTab] = useState(null); // 'playlist' | 'notes' | 'progress'
+
+            const [activeTrailer, setActiveTrailer] = useState(null);
+            const [activeDeck, setActiveDeck] = useState(null); 
+            const [actorProfile, setActorProfile] = useState(null); 
+            
+            const [activeGrid, setActiveGrid] = useState(null);
+            const [isNavVisible, setIsNavVisible] = useState(true);
+            const lastScrollY = useRef(0);
+
+            useEffect(() => {
+                document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+                document.documentElement.style.setProperty('--accent', settings.accent);
+                localStorage.setItem('omni16_settings', JSON.stringify(settings));
+            }, [settings]);
+
+            useEffect(() => localStorage.setItem('omni16_data', JSON.stringify(vault)), [vault]);
+            useEffect(() => localStorage.setItem('omni16_lists', JSON.stringify(playlists)), [playlists]);
+
+            const updateSetting = (k, v) => { haptic(); setSettings(p => ({...p, [k]: v})); };
+            const showToast = (msg) => { haptic(); setToast(msg); };
+            const getIcon = (type, s=24) => { const e = CATEGORIES.find(c=>c.id===type); return e ? React.createElement(e.i, {s, c:e.c}) : <Icon.Film s={s}/>; };
+
+            const handleScroll = (e) => {
+                const currentScrollY = e.target.scrollTop;
+                if (currentScrollY > lastScrollY.current + 15) setIsNavVisible(false);
+                else if (currentScrollY < lastScrollY.current - 15) setIsNavVisible(true);
+                lastScrollY.current = currentScrollY;
+            };
+
+            const moveTab = (index, direction) => {
+                const newTabs = [...settings.tabsOrder];
+                if(direction === 'up' && index > 0) { [newTabs[index-1], newTabs[index]] = [newTabs[index], newTabs[index-1]]; } 
+                else if (direction === 'down' && index < newTabs.length - 1) { [newTabs[index+1], newTabs[index]] = [newTabs[index], newTabs[index+1]]; }
+                updateSetting('tabsOrder', newTabs);
+            };
+
+            // Export / Import logic
+            const exportData = () => {
+                haptic();
+                const data = { vault, playlists, settings };
+                const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; 
+                a.download = `OmniVault_Backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("Data Exported!");
+            };
+
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                haptic();
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if(data.vault) { setVault(data.vault); localStorage.setItem('omni16_data', JSON.stringify(data.vault)); }
+                        if(data.playlists) { setPlaylists(data.playlists); localStorage.setItem('omni16_lists', JSON.stringify(data.playlists)); }
+                        if(data.settings) { setSettings(data.settings); localStorage.setItem('omni16_settings', JSON.stringify(data.settings)); }
+                        showToast("Data Imported! Reloading in 1s...");
+                        setTimeout(() => window.location.reload(), 1200);
+                    } catch(err) { showToast("Invalid Format"); }
+                };
+                reader.readAsText(file);
+            };
+
+            // AI Logic
+            const askAI = async (promptText) => {
+                if (!settings.aiKey || settings.aiKey.trim() === "") return { error: "Missing API Key." };
+                try {
+                    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                        method: "POST", 
+                        headers: { "Authorization": `Bearer ${settings.aiKey.trim()}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({ model: settings.aiModel, messages: [{ role: "user", content: promptText }] })
+                    });
+                    const data = await res.json();
+                    if(data.error) return { error: data.error.message || "Unknown OpenRouter Error" };
+                    return { text: data.choices?.[0]?.message?.content };
+                } catch(e) { return { error: "Network Error." }; }
+            };
+
+            const testAIConnection = async () => {
+                setAiTestResult("Testing connection...");
+                const res = await askAI("Reply exactly with one word: SUCCESS");
+                if (res.error) setAiTestResult(`❌ Error: ${res.error}`);
+                else setAiTestResult(`✅ Connected successfully!`);
+            };
+
+            const runSmartSearch = async () => {
+                if(!addState.query) return;
+                haptic(); setAddState(p => ({...p, loading: true, results: []}));
+                const res = await askAI(`Find exactly 5 movies/series related to: "${addState.query.replace(/"/g, "")}". Reply ONLY in JSON format: [{"title":"Inception","type":"movie"}].`);
+                if(res.text && !res.error) {
+                    try {
+                        const rawJson = res.text.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const items = JSON.parse(rawJson);
+                        const fetches = items.map(i => fetch(`https://api.themoviedb.org/3/search/${i.type}?query=${encodeURIComponent(i.title)}&include_adult=${settings.adult}&language=${settings.language}`, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json()));
+                        const results = await Promise.all(fetches);
+                        let final = [];
+                        results.forEach((r, idx) => {
+                            const hit = r.results?.[0];
+                            if(hit) { final.push({ id: `tmdb_${hit.id}`, aid: hit.id, type: items[idx].type, title: hit.title || hit.name, year: (hit.release_date || hit.first_air_date || '').split('-')[0], image: hit.poster_path ? `https://image.tmdb.org/t/p/w500${hit.poster_path}` : null }); }
+                        });
+                        setAddState(p => ({...p, loading: false, results: final}));
+                    } catch(e) { setAddState(p => ({...p, loading: false})); showToast("AI Parse Error."); }
+                } else { setAddState(p => ({...p, loading: false})); showToast(res.error || "AI Failed."); }
+            };
+
+            useEffect(() => {
+                if (addState.tab !== 'search' || !debSearch.trim()) return; 
+                if (searchCache.current[debSearch]) { setAddState(p => ({...p, loading: false, results: searchCache.current[debSearch]})); return; }
+                let isMounted = true;
+                
+                const search = async () => {
+                    setAddState(p => ({...p, loading: true}));
+                    try {
+                        let cleanQuery = debSearch.replace(/[()]/g, ' ');
+                        const yrMatch = cleanQuery.match(/\b(19\d{2}|20\d{2})\b/);
+                        let yearFilter = null;
+                        if(yrMatch) {
+                            yearFilter = yrMatch[0];
+                            cleanQuery = cleanQuery.replace(yrMatch[0], '').trim();
+                        }
+                        if(!cleanQuery) cleanQuery = debSearch;
+
+                        const d = await fetch(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(cleanQuery)}&include_adult=${settings.adult}&language=${settings.language}`, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json());
+                        if(!isMounted) return;
+                        
+                        let parsed = (d.results || []).filter(i => i.media_type === 'movie' || i.media_type === 'tv').map(i => ({
+                            id: `tmdb_${i.id}`, aid: i.id, type: i.media_type, title: i.title || i.name, year: (i.release_date || i.first_air_date || '').split('-')[0], image: i.poster_path ? `https://image.tmdb.org/t/p/w500${i.poster_path}` : null
+                        }));
+                        
+                        // Smart Year Prioritization Match
+                        if(yearFilter) {
+                            parsed.sort((a,b) => {
+                                if(a.year === yearFilter && b.year !== yearFilter) return -1;
+                                if(b.year === yearFilter && a.year !== yearFilter) return 1;
+                                return 0;
+                            });
+                        }
+                        
+                        parsed = parsed.slice(0, 10);
+                        searchCache.current[debSearch] = parsed;
+                        setAddState(p => ({...p, results: parsed, loading: false}));
+                    } catch(e) { if(isMounted) setAddState(p => ({...p, loading: false})); }
+                };
+                search();
+                return () => { isMounted = false; };
+            }, [debSearch, settings.adult, settings.language, addState.tab]);
+
+            const processBulkImport = async () => {
+                if(!bulkState.input.trim()) return;
+                haptic(); setBulkState(p => ({...p, loading: true, results: [], preview: true}));
+                const titles = bulkState.input.split('\n').map(t=>t.trim()).filter(Boolean);
+                const results = [];
+                for(let t of titles) {
+                    try {
+                        let cleanT = t.replace(/[()]/g, ' ');
+                        const yrMatch = cleanT.match(/\b(19\d{2}|20\d{2})\b/);
+                        let yearFilter = null;
+                        if(yrMatch) {
+                            yearFilter = yrMatch[0];
+                            cleanT = cleanT.replace(yrMatch[0], '').trim();
+                        }
+                        if(!cleanT) cleanT = t;
+
+                        const d = await fetch(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(cleanT)}&include_adult=${settings.adult}&language=${settings.language}`, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json());
+                        let validResults = d.results?.filter(i => i.media_type === 'movie' || i.media_type === 'tv') || [];
+                        
+                        // Prioritize Year match for Bulk Import
+                        if(yearFilter) {
+                            validResults.sort((a,b) => {
+                                const aYear = (a.release_date || a.first_air_date || '').split('-')[0];
+                                const bYear = (b.release_date || b.first_air_date || '').split('-')[0];
+                                if(aYear === yearFilter && bYear !== yearFilter) return -1;
+                                if(bYear === yearFilter && aYear !== yearFilter) return 1;
+                                return 0;
+                            });
+                        }
+
+                        const hit = validResults[0];
+                        if(hit) {
+                            results.push({ success: true, original: t, item: { id: `tmdb_${hit.id}`, aid: hit.id, type: hit.media_type, title: hit.title || hit.name, year: (hit.release_date || hit.first_air_date || '').split('-')[0], image: hit.poster_path ? `https://image.tmdb.org/t/p/w500${hit.poster_path}` : null }});
+                        } else { results.push({ success: false, original: t }); }
+                    } catch(e) { results.push({ success: false, original: t }); }
+                }
+                setBulkState(p => ({...p, loading: false, results}));
+            };
+
+            const commitBulkImport = () => {
+                haptic();
+                const newItems = bulkState.results.filter(r => r.success).map(r => ({ ...r.item, status: 'backlog', addedAt: Date.now(), soulRating: 0, customTags: [], personalNote: '' }));
+                setVault(prev => {
+                    const existingIds = new Set(prev.map(v => v.aid));
+                    const uniqueNew = newItems.filter(item => !existingIds.has(item.aid));
+                    return [...uniqueNew, ...prev];
+                });
+                showToast(`Imported ${newItems.length} items to Backlog.`);
+                setAddState(p => ({...p, open: false}));
+                setBulkState({ input: '', results: [], loading: false, preview: false });
+            };
+
+// Fast Fetch using Promise.all & Cache
+            const fetchExplore = async (force = false) => {
+                if(!force && exploreData.trending.length > 0) return;
+                setExploreLoading(true);
+                try {
+                    const traktHeaders = { 'Content-Type': 'application/json', 'trakt-api-version': '2', 'trakt-api-key': getTrakt() };
+                    const lang = settings.language;
+                    
+                    const [traktMovies, traktShows, jikan] = await Promise.all([
+                        fetch('https://api.trakt.tv/movies/trending?limit=10', { headers: traktHeaders }).then(r=>r.json()).catch(()=>[]),
+                        fetch('https://api.trakt.tv/shows/trending?limit=10', { headers: traktHeaders }).then(r=>r.json()).catch(()=>[]),
+                        fetch(`${settings.jikanUrl}/top/anime?filter=airing&limit=8`).then(r=>r.json()).catch(()=>({data:[]}))
+                    ]);
+
+                    const mapTraktToTMDB = async (items, type) => {
+                        const fetches = items.map(i => {
+                            const tmdbId = i[type === 'movie' ? 'movie' : 'show']?.ids?.tmdb;
+                            if(!tmdbId) return null;
+                            return fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?language=${lang}`, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json()).catch(()=>null);
+                        });
+                        const results = await Promise.all(fetches);
+                        return results.filter(Boolean).map(i => ({
+                            id: `${type}_${i.id}`, aid: i.id, type, title: i.title || i.name,
+                            image: i.poster_path ? `https://image.tmdb.org/t/p/w500${i.poster_path}` : null,
+                            backdrop: i.backdrop_path ? `https://image.tmdb.org/t/p/w780${i.backdrop_path}` : null,
+                            year: (i.release_date || i.first_air_date || '').toString().split('-')[0]
+                        }));
+                    };
+
+                    const [popMovies, popTv] = await Promise.all([ mapTraktToTMDB(traktMovies, 'movie'), mapTraktToTMDB(traktShows, 'tv') ]);
+                    
+                    const animeData = (jikan.data || []).map(i => ({ 
+                        id: `anime_${i.mal_id}`, aid: i.mal_id, type: 'anime', title: i.title || i.title_english, 
+                        image: i.images?.jpg?.large_image_url, backdrop: null, year: i.year?.toString() 
+                    }));
+
+                    const combinedTrending = [...popMovies, ...popTv].sort(() => 0.5 - Math.random());
+
+                    // FIX #31: Do NOT store React components (<Icon...>) in state/cache. Store identifying strings.
+                    const extraGenres = [
+                        { id: 9648, name: "Mystery Mindbenders", type: "movie", iconName: "Search", iconColor: "text-yellow-500" },
+                        { id: 27, name: "Horror Nights", type: "movie", iconName: "Play", iconColor: "text-red-600" },
+                        { id: 878, name: "Sci-Fi Dimensions", type: "movie", iconName: "Sparkles", iconColor: "text-blue-400" },
+                        { id: 14, name: "Fantasy Worlds", type: "movie", iconName: "Collection", iconColor: "text-purple-400" },
+                        { id: 10751, name: "Kids & Family", type: "movie", iconName: "Plus", iconColor: "text-green-400" },
+                        { id: 99, name: "Documentaries", type: "movie", iconName: "List", iconColor: "text-gray-400" }
+                    ];
+
+                    let allExtras = [...extraGenres];
+                    if (settings.adult) { allExtras.push({ id: 10749, special: "adult", name: "Adult / Steamy", type: "movie", iconName: "Sparkles", iconColor: "text-pink-500" }); }
+
+                    const rawExtras = await Promise.all(allExtras.map(cat => {
+                        let url = `https://api.themoviedb.org/3/discover/${cat.type}?include_adult=${settings.adult}&language=${lang}&sort_by=popularity.desc`;
+                        if (cat.special === "adult") { url += `&with_genres=10749&certification_country=${settings.region}&certification=NC-17`; } 
+                        else { url += `&with_genres=${cat.id}`; }
+                        return fetch(url, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json()).catch(()=>({results:[]}));
+                    }));
+
+                    const extraSections = rawExtras.map((d, i) => ({
+                        id: allExtras[i].id, title: allExtras[i].name, type: allExtras[i].type, 
+                        iconName: allExtras[i].iconName, iconColor: allExtras[i].iconColor,
+                        items: (d.results||[]).filter(x => x.poster_path).slice(0,10).map(x => ({
+                             id: `${allExtras[i].type}_${x.id}`, aid: x.id, type: allExtras[i].type, title: x.title || x.name,
+                             image: `https://image.tmdb.org/t/p/w500${x.poster_path}`, year: (x.release_date || x.first_air_date || '').toString().split('-')[0]
+                        }))
+                    }));
+
+                    const finalData = { trending: combinedTrending.slice(0, 5), anime: animeData, popMovies, popTv, extras: extraSections };
+                    setExploreData(finalData);
+                    sessionStorage.setItem('omni16_explore_cache', JSON.stringify({ ts: Date.now(), data: finalData }));
+                } catch(e) { console.error("Explore Fetch Error", e); }
+                setExploreLoading(false);
+            };
+
+            useEffect(() => { if(activeNav === 'explore') fetchExplore(); }, [activeNav, settings.adult, settings.language, settings.region]);
+
+            const syncUpdate = (id, updates) => {
+                setVault(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+                setViewingItem(prev => prev && prev.id === id ? {...prev, ...updates} : prev);
+            };
+
+            const deleteItem = (id) => {
+                setVault(prev => prev.filter(v => v.id !== id));
+                setPlaylists(prev => prev.map(pl => ({ ...pl, itemIds: pl.itemIds.filter(i => i !== id) })));
+                if(viewingItem?.id === id) setViewingItem(null);
+                showToast("Item deleted from Vault.");
+            };
+
+            const addToVaultFast = (rawItem) => {
+                haptic();
+                let target = vault.find(v => v.aid === rawItem.aid && v.type === rawItem.type);
+                if (!target) {
+                    const newItem = { ...rawItem, id: `tmdb_${rawItem.aid}`, status: 'backlog', addedAt: Date.now(), soulRating: 0, customTags: [], personalNote: '' };
+                    setVault(prev => [newItem, ...prev]);
+                    showToast("Added to Vault Backlog");
+                } else { showToast("Already in Vault"); }
+            };
+
+            const interactWithTempItem = (updates) => {
+                haptic();
+                if (viewingItem.status === 'none') {
+                    const newItem = { ...viewingItem, status: 'backlog', addedAt: Date.now(), soulRating: 0, customTags: [], personalNote: '', ...updates };
+                    setVault(prev => { if(prev.some(v => v.aid === newItem.aid)) return prev; return [newItem, ...prev]; });
+                    setViewingItem(newItem);
+                    showToast("Added to Vault");
+                } else { syncUpdate(viewingItem.id, updates); }
+            };
+
+            const openDetail = async (rawItem) => {
+                haptic();
+                let target = vault.find(v => v.aid === rawItem.aid && v.type === rawItem.type);
+                if (!target) { target = { ...rawItem, id: `tmp_${rawItem.aid}`, status: 'none', customTags: [], personalNote: '' }; }
+                
+                setViewingItem(target); 
+                setActiveTrailer(null); 
+                setInlineActionTab(null);
+                setAddState(p => ({...p, open: false}));
+
+                if(!target.desc || !target.cast || !target.recommendations) {
+                    try {
+                        let u = {};
+                        if(target.type === 'movie' || target.type === 'tv') {
+                            const d = await fetch(`https://api.themoviedb.org/3/${target.type}/${target.aid}?append_to_response=videos,images,credits,watch/providers,recommendations&language=${settings.language}`, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json());
+                            if (d.success === false) throw new Error("TMDB blocked.");
+
+                            const providers = d['watch/providers']?.results?.[settings.region] || d['watch/providers']?.results?.US || {};
+                            u = {
+                                desc: d.overview, genres: d.genres?.map(g => g.name) || [], 
+                                runtime: d.runtime || (d.episode_run_time?.[0]) || 45,
+                                cast: (d.credits?.cast || []).slice(0, 10).map(c => ({ id: c.id, name: c.name, role: c.character, image: c.profile_path ? `https://image.tmdb.org/t/p/w200${c.profile_path}` : null })),
+                                mediaImages: (d.images?.backdrops || []).slice(0, 4).map(i => `https://image.tmdb.org/t/p/w780${i.file_path}`),
+                                mediaVideos: (d.videos?.results || []).filter(v => v.site === 'YouTube' && v.type !== 'Featurette').slice(0, 4),
+                                stream: providers.flatrate || [], rent: providers.rent || [],
+                                recommendations: (d.recommendations?.results || []).filter(r => r.poster_path).slice(0, 12).map(r => ({
+                                    id: `tmdb_${r.id}`, aid: r.id, type: target.type, title: r.title || r.name, image: `https://image.tmdb.org/t/p/w500${r.poster_path}`, year: (r.release_date || r.first_air_date || '').toString().split('-')[0]
+                                }))
+                            };
+                        } else if(target.type === 'anime') {
+                            const d = await fetch(`${settings.jikanUrl}/anime/${target.aid}/full`).then(r=>r.json());
+                            const recs = await fetch(`${settings.jikanUrl}/anime/${target.aid}/recommendations`).then(r=>r.json()).catch(()=>({data:[]}));
+                            u = { 
+                                desc: d.data?.synopsis, genres: d.data?.genres?.map(g => g.name) || [], 
+                                mediaVideos: d.data?.trailer?.youtube_id ? [{ key: d.data.trailer.youtube_id, name: 'Trailer' }] : [], mediaImages: [],
+                                recommendations: (recs.data || []).slice(0,10).map(r => ({
+                                    id: `anime_${r.entry.mal_id}`, aid: r.entry.mal_id, type: 'anime', title: r.entry.title, image: r.entry.images?.jpg?.large_image_url
+                                }))
+                            };
+                        }
+                        if (target.status !== 'none') { syncUpdate(target.id, u); } else { setViewingItem(p => ({...p, ...u})); }
+                    } catch(e) {}
+                }
+            };
+
+            const fetchActor = async (actor) => {
+                haptic(); 
+                setActorProfile({ loading: true, ...actor });
+                try {
+                    const d = await fetch(`https://api.themoviedb.org/3/person/${actor.id}?append_to_response=combined_credits&language=${settings.language}`, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json());
+                    if (d.success === false) throw new Error("Missing actor data");
+                    const knownFor = (d.combined_credits?.cast || []).sort((a,b) => b.popularity - a.popularity).slice(0, 9).map(i => ({ aid: i.id, type: i.media_type, title: i.title || i.name, image: i.poster_path ? `https://image.tmdb.org/t/p/w200${i.poster_path}` : null }));
+                    setActorProfile(p => ({ ...p, loading: false, bio: d.biography, knownFor }));
+                } catch(e) { setActorProfile(null); showToast("Failed to load profile."); }
+            };
+
+            const openGenreGrid = async (genreName, genreId = null, mediaType = 'movie') => {
+                haptic(); setViewingItem(null);
+                const id = genreId || GENRE_MAP[genreName] || GENRE_MAP["Action"];
+                setActiveGrid({ title: `${genreName}`, loading: true, items: [] });
+                try {
+                    let url = `https://api.themoviedb.org/3/discover/${mediaType}?with_genres=${id}&include_adult=${settings.adult}&language=${settings.language}&sort_by=popularity.desc`;
+                    if (id === 10749 && settings.adult && genreName.includes("Adult")) {
+                        url = `https://api.themoviedb.org/3/discover/movie?with_genres=10749&certification_country=${settings.region}&certification=NC-17&sort_by=popularity.desc`;
+                    }
+                    const d = await fetch(url, { headers: { Authorization: `Bearer ${getTMDB()}` } }).then(r=>r.json());
+                    const items = (d.results||[]).filter(i => i.poster_path).map(i => ({
+                        id: `${mediaType}_${i.id}`, aid: i.id, type: mediaType, title: i.title || i.name, year: (i.release_date || i.first_air_date || '').split('-')[0], image: i.poster_path ? `https://image.tmdb.org/t/p/w500${i.poster_path}` : null
+                    }));
+                    setActiveGrid({ title: `${genreName}`, loading: false, items });
+                } catch (e) { setActiveGrid({ title: genreName, loading: false, items: [], error: true }); }
+            };
+
+            
+// ==== injected feed renderer ====
+const renderVaultItems = () => {
+  if (settings.layout === 'feed') {
+    return (
+      <div className="space-y-6 px-4">
+        {renderVaultItems() /* replaced */ // original map(item => (
+          <div key={item.id} className="bg-white dark:bg-[#151517] rounded-3xl overflow-hidden border border-black/5 dark:border-white/5">
+            <div className="w-full h-[220px] bg-black">
+              {item.image && <img src={item.image} className="w-full h-full object-cover"/>}
+            </div>
+            <div className="p-4">
+              <h2 className="font-black text-lg">{item.title}</h2>
+              <p className="text-xs text-gray-400">{item.year}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return filteredVault.map(item => (
+    <div key={item.id}>
+    </div>
+  ));
+};
+
+const filteredVault = useMemo(() => {
+                let filtered = vault.filter(v => {
+                    if (filterStatus !== 'all' && v.status !== filterStatus) return false;
+                    if (internalQuery && !v.title.toLowerCase().includes(internalQuery.toLowerCase())) return false;
+                    if (globalTagFilter && !(v.genres?.includes(globalTagFilter) || v.customTags?.includes(globalTagFilter))) return false;
+                    return true;
+                });
+                return filtered.sort((a,b) => b.addedAt - a.addedAt);
+            }, [vault, filterStatus, internalQuery, globalTagFilter]);
+
+            const stats = useMemo(() => {
+                const completed = vault.filter(v => v.status === 'completed');
+                let eps = 0, mins = 0; let genreCount = {};
+                completed.forEach(v => {
+                    if (v.type === 'tv') { eps += 24; mins += (24 * (v.runtime || 45)); } 
+                    else { eps += 1; mins += (v.runtime || 110); }
+                    (v.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
+                });
+                const topGenres = Object.entries(genreCount).sort((a,b) => b[1] - a[1]).slice(0,5);
+                return { total: vault.length, comp: completed.length, eps, days: (mins/60/24).toFixed(1), topGenres };
+            }, [vault]);
+
+            const renderCardList = (items) => (
+                <div className="flex overflow-x-auto space-x-4 hide-scrollbar px-6 -mx-6 pb-4">
+                    {items.map((item, idx) => (
+                        <div key={idx} onClick={() => openDetail(item)} className="w-[120px] flex-shrink-0 cursor-pointer bouncy-tap animate-spring-pop" style={{animationDelay: `${idx * 0.05}s`}}>
+                            <div className="h-[180px] bg-gray-200 dark:bg-[#1C1C1E] rounded-[1.5rem] overflow-hidden mb-2 shadow-sm border border-black/5 dark:border-white/5 relative">
+                                {item.image ? <img src={item.image} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/> : <div className="w-full h-full flex justify-center items-center"><Icon.Film s={32} c="text-gray-400"/></div>}
+                            </div>
+                            <p className="text-[11px] font-bold truncate text-center">{item.title}</p>
+                        </div>
+                    ))}
+                </div>
+            );
+
+            const renderSafeModal = () => {
+                if (!viewingItem) return null;
+                const safeCast = viewingItem.cast || [];
+                const safeVideos = viewingItem.mediaVideos || [];
+                const safeImages = viewingItem.mediaImages || [];
+                const safeStream = viewingItem.stream || [];
+                const safeGenres = viewingItem.genres || [];
+                const safeCustomTags = viewingItem.customTags || [];
+                const safeCustomSources = settings.customSources || []; 
+                const safeRecs = viewingItem.recommendations || [];
+
+                return (
+                    <div className="flex-1 overflow-y-auto hide-scrollbar pb-32 relative bg-[#F2F2F7] dark:bg-[#0A0A0C]">
+                        <div className="relative w-full h-[40vh] flex-shrink-0 bg-black">
+                            {activeTrailer ? (
+                                <iframe className="w-full h-full animate-spring-pop" src={`https://www.youtube.com/embed/${activeTrailer}?autoplay=1&playsinline=1`} frameBorder="0" allowFullScreen></iframe>
+                            ) : (
+                                <>
+                                    {(viewingItem.backdrop || viewingItem.image) && <img src={viewingItem.backdrop || viewingItem.image} className="w-full h-full object-cover opacity-50" />}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[#F2F2F7] dark:from-[#0A0A0C] via-transparent to-transparent" />
+                                    {viewingItem.status === 'none' && (
+                                        <button onClick={() => interactWithTempItem({status: 'backlog'})} className="absolute bottom-6 right-6 bg-accent text-white px-5 py-3 rounded-full font-black text-sm shadow-lg shadow-accent/50 z-50 bouncy-tap animate-spring-up"><Icon.Plus s={18} c="mr-1.5 inline"/> Vault It</button>
+                                    )}
+                                </>
+                            )}
+                            <button onClick={() => { haptic(); setViewingItem(null); }} className="absolute top-14 left-6 w-12 h-12 bg-white/60 dark:bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center z-50 border border-black/5 dark:border-white/10 bouncy-tap"><Icon.ChevronL s={24} /></button>
+                        </div>
+
+                        <div className="px-6 -mt-24 relative z-10">
+                            <div className="flex space-x-5 mb-8 items-end animate-spring-up">
+                                <div className="w-[120px] h-[180px] bg-white dark:bg-[#151517] rounded-3xl shadow-2xl overflow-hidden flex-shrink-0 border border-black/5 dark:border-white/5">
+                                    {viewingItem.image ? <img src={viewingItem.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon.Film s={48} c="text-gray-400"/></div>}
+                                </div>
+                                <div className="pb-2 flex-1">
+                                    <h1 className="text-3xl font-black leading-tight mb-2 tracking-tight">{viewingItem.title}</h1>
+                                    <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase text-gray-500"><span>{viewingItem.type}</span><span>{viewingItem.year}</span>{viewingItem.runtime && <span>{viewingItem.runtime}m</span>}</div>
+                                </div>
+                            </div>
+
+                            {/* CORE STATUS BUTTONS */}
+                            <div className="grid grid-cols-4 gap-3 mb-3">
+                                {[ { id: 'backlog', l: 'Plan', i: <Icon.List s={20}/>, c: 'text-gray-700 dark:text-white bg-white dark:bg-[#151517] shadow-sm' }, { id: 'watching', l: 'Active', i: <Icon.Play s={20} fill="currentColor"/>, c: 'text-accent bg-accent/10 border-accent/20 scale-105' }, { id: 'completed', l: 'Done', i: <Icon.Check s={20}/>, c: 'text-green-500 bg-green-500/10 scale-105' }, { id: 'dropped', l: 'Drop', i: <Icon.X s={20}/>, c: 'text-red-500 bg-red-500/10' } ].map(btn => (
+                                    <button key={btn.id} onClick={() => interactWithTempItem({ status: btn.id })} className={`flex flex-col items-center justify-center py-4 rounded-[1.5rem] shadow-sm bouncy-tap border ${viewingItem.status === btn.id ? btn.c : 'bg-white dark:bg-[#151517] border-black/5 dark:border-white/5 text-gray-400'}`}>
+                                        {btn.i}<span className="text-[9px] font-black mt-2 uppercase">{btn.l}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* INLINE ACTION TOGGLES (PLAYLIST / NOTES / PROGRESS) */}
+                            {viewingItem.status !== 'none' && (
+                                <div className="mb-8">
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setInlineActionTab(inlineActionTab === 'playlist' ? null : 'playlist')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center transition-colors ${inlineActionTab === 'playlist' ? 'bg-accent text-white' : 'bg-gray-200 dark:bg-[#2C2C2E] text-gray-500'}`}><Icon.Grid s={14} c="mr-1.5"/> Playlist</button>
+                                        <button onClick={() => setInlineActionTab(inlineActionTab === 'notes' ? null : 'notes')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center transition-colors ${inlineActionTab === 'notes' ? 'bg-accent text-white' : 'bg-gray-200 dark:bg-[#2C2C2E] text-gray-500'}`}><Icon.Collection s={14} c="mr-1.5"/> Notes</button>
+                                        <button onClick={() => setInlineActionTab(inlineActionTab === 'progress' ? null : 'progress')} className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center transition-colors ${inlineActionTab === 'progress' ? 'bg-accent text-white' : 'bg-gray-200 dark:bg-[#2C2C2E] text-gray-500'}`}><Icon.Chart s={14} c="mr-1.5"/> Progress</button>
+                                    </div>
+                                    
+                                    {/* DYNAMIC ACTION CONTENT */}
+                                    <div className="mt-3 overflow-hidden transition-all duration-300">
+                                        {inlineActionTab === 'playlist' && (
+                                            <div className="bg-white dark:bg-[#151517] p-4 rounded-3xl border border-black/5 dark:border-white/5 animate-slide-down">
+                                                <div className="flex overflow-x-auto space-x-3 hide-scrollbar pb-1">
+                                                    {playlists.map(pl => {
+                                                        const isIn = pl.itemIds.includes(viewingItem.id);
+                                                        return (
+                                                            <button key={pl.id} onClick={() => { haptic(); setPlaylists(p => p.map(x => x.id === pl.id ? { ...x, itemIds: isIn ? x.itemIds.filter(id => id !== viewingItem.id) : [...x.itemIds, viewingItem.id] } : x)); }} className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap bouncy-tap border ${isIn ? 'bg-accent text-white border-transparent' : 'bg-gray-50 dark:bg-[#1C1C1E] text-gray-500 border-black/5 dark:border-white/5'}`}>
+                                                                {pl.icon} {pl.name}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {inlineActionTab === 'notes' && (
+                                            <div className="bg-white dark:bg-[#151517] p-4 rounded-3xl border border-black/5 dark:border-white/5 animate-slide-down">
+                                                <textarea placeholder="Write personal notes, thoughts, or reminders here..." value={viewingItem.personalNote || ''} onChange={(e) => interactWithTempItem({personalNote: e.target.value})} className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-2xl focus:outline-none border border-black/5 dark:border-white/5 resize-none h-24"></textarea>
+                                            </div>
+                                        )}
+                                        {inlineActionTab === 'progress' && (
+                                            <div className="bg-white dark:bg-[#151517] p-4 rounded-3xl border border-black/5 dark:border-white/5 animate-slide-down">
+                                                <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-black uppercase text-gray-500">Soul Meter</span><span className="font-black text-accent">{viewingItem.soulRating || 0}</span></div>
+                                                <input type="range" min="0" max="100" value={viewingItem.soulRating || 0} onChange={(e) => interactWithTempItem({ soulRating: parseInt(e.target.value) })} className="w-full mb-4" />
+                                                <span className="text-[10px] uppercase font-bold text-gray-500 ml-1">Episode / Progress</span>
+                                                <input type="text" placeholder="e.g. S2 E4 or 1h 20m" value={viewingItem.resumeEp || ''} onChange={e => interactWithTempItem({resumeEp: e.target.value})} className="w-full mt-1 bg-gray-50 dark:bg-[#1C1C1E] px-4 py-3 rounded-xl font-bold text-sm focus:outline-none border border-black/5 dark:border-white/5" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <ExpandableText text={viewingItem.desc} maxChars={180} />
+
+                            <div className="mb-8 border-t border-black/5 dark:border-white/5 pt-6 animate-spring-up" style={{animationDelay: "0.15s"}}>
+                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-4">DNA & Tags</h3>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {safeGenres.map(g => (
+                                        <button key={g} onClick={() => openGenreGrid(g)} className="bg-gray-200/50 dark:bg-[#1C1C1E] px-3 py-1.5 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 bouncy-tap hover:bg-gray-300 dark:hover:bg-[#2C2C2E] transition-colors"># {g}</button>
+                                    ))}
+                                    {safeCustomTags.map(t => (
+                                        <button key={t} onClick={() => { setGlobalTagFilter(t); setViewingItem(null); setActiveNav('library'); }} className="bg-accent/10 text-accent px-3 py-1.5 rounded-lg text-xs font-bold border border-accent/20 flex items-center bouncy-tap">
+                                            # {t} <span onClick={(e) => { e.stopPropagation(); interactWithTempItem({customTags: safeCustomTags.filter(x => x !== t)}); }} className="ml-2 text-red-500 font-bold"><Icon.X s={12}/></span>
+                                        </button>
+                                    ))}
+                                </div>
+                                {viewingItem.status !== 'none' && (
+                                    <div className="flex space-x-2">
+                                        <input type="text" placeholder="Add custom tag..." onKeyPress={(e) => { if(e.key === 'Enter' && e.target.value.trim()){ interactWithTempItem({customTags: [...safeCustomTags, e.target.value.trim()]}); e.target.value=''; } }} className="flex-1 bg-white dark:bg-[#151517] text-sm font-bold px-4 py-3 rounded-2xl focus:outline-none border border-black/5 dark:border-white/5" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {(safeVideos.length > 0 || safeImages.length > 0) && (
+                                <div className="mb-8 border-t border-black/5 dark:border-white/5 pt-6 animate-spring-up" style={{animationDelay: "0.2s"}}>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-4">Media</h3>
+                                    <div className="flex overflow-x-auto space-x-3 hide-scrollbar pb-2">
+                                        {safeVideos.map((vid, idx) => (
+                                            <div key={idx} onClick={() => { haptic(); setActiveTrailer(vid.key); }} className="w-[200px] flex-shrink-0 cursor-pointer relative rounded-2xl overflow-hidden h-[112px] border border-black/5 dark:border-white/5 shadow-sm bouncy-tap">
+                                                <img src={`https://img.youtube.com/vi/${vid.key}/mqdefault.jpg`} className="w-full h-full object-cover"/>
+                                                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center"><Icon.Play s={28} c="text-white mb-1" fill="currentColor"/><span className="text-[10px] text-white font-bold px-2 truncate w-full text-center">{vid.name}</span></div>
+                                            </div>
+                                        ))}
+                                        {safeImages.map((img, idx) => (
+                                            <div key={`img_${idx}`} className="w-[200px] flex-shrink-0 relative rounded-2xl overflow-hidden h-[112px] border border-black/5 dark:border-white/5 shadow-sm">
+                                                <img src={img} className="w-full h-full object-cover"/>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mb-8 border-t border-black/5 dark:border-white/5 pt-6 animate-spring-up" style={{animationDelay: "0.25s"}}>
+                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-4">Availability</h3>
+                                {safeStream.length > 0 && (
+                                    <div className="mb-4">
+                                        <span className="text-[10px] font-bold text-gray-400 block mb-2">STREAM</span>
+                                        <div className="flex gap-2">{safeStream.slice(0,5).map((p,i) => <img key={i} src={`https://image.tmdb.org/t/p/original${p.logo_path}`} className="w-10 h-10 rounded-xl bouncy-tap" title={p.provider_name}/>)}</div>
+                                    </div>
+                                )}
+                                <div>
+                                    <span className="text-[10px] font-bold text-gray-400 block mb-2">CUSTOM SOURCES</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {safeCustomSources.map((site, i) => (
+                                            <a key={i} onClick={haptic} href={site.url.replace('{q}', encodeURIComponent(viewingItem.title))} target="_blank" className="flex items-center bg-white dark:bg-[#151517] rounded-xl px-4 py-3 border border-black/5 dark:border-white/5 bouncy-tap">
+                                                <img src={`https://www.google.com/s2/favicons?sz=64&domain=${site.domain}`} className="w-4 h-4 mr-2 rounded-sm"/><span className="font-bold text-xs">{site.name}</span>
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {safeCast.length > 0 && (
+                                <div className="mb-8 border-t border-black/5 dark:border-white/5 pt-6 animate-spring-up" style={{animationDelay: "0.3s"}}>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-4">Cast Nexus</h3>
+                                    <div className="flex overflow-x-auto space-x-4 hide-scrollbar pb-2">
+                                        {safeCast.map(actor => (
+                                            <div key={actor.id} onClick={() => fetchActor(actor)} className="w-[80px] flex-shrink-0 text-center cursor-pointer bouncy-tap">
+                                                <div className="w-16 h-16 mx-auto bg-gray-200 dark:bg-[#1C1C1E] rounded-full overflow-hidden mb-2 border border-black/5 dark:border-white/5">{actor.image && <img src={actor.image} className="w-full h-full object-cover"/>}</div>
+                                                <p className="text-[10px] font-black leading-tight truncate">{actor.name}</p>
+                                                <p className="text-[9px] text-gray-500 font-bold truncate mt-0.5">{actor.role}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {safeRecs.length > 0 && (
+                                <div className="mb-8 border-t border-black/5 dark:border-white/5 pt-6 animate-spring-up" style={{animationDelay: "0.35s"}}>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-4">Related Artifacts</h3>
+                                    <div className="flex overflow-x-auto space-x-4 hide-scrollbar pb-2 -mx-6 px-6">
+                                        {safeRecs.map(rec => (
+                                            <div key={rec.id} onClick={() => openDetail(rec)} className="w-[100px] flex-shrink-0 cursor-pointer bouncy-tap">
+                                                <div className="h-36 bg-gray-200 dark:bg-[#1C1C1E] rounded-[1.2rem] overflow-hidden mb-2 shadow-sm border border-black/5 dark:border-white/5 relative">
+                                                    {rec.image ? <img src={rec.image} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/> : <div className="w-full h-full flex justify-center items-center"><Icon.Film s={24} c="text-gray-400"/></div>}
+                                                </div>
+                                                <p className="text-[10px] font-bold text-center leading-tight line-clamp-2 px-1">{rec.title}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="app-container">
+                    {toast && <Toast msg={toast} onClose={() => setToast(null)} />}
+                    
+                    {/* TOP NAV BAR */}
+                    {activeNav !== 'explore' && (
+                        <header className="pt-14 pb-4 px-6 glass-panel sticky top-0 z-20">
+                            <div className="flex justify-between items-center mb-4">
+                                <h1 className="text-4xl font-black tracking-tight capitalize">{activeNav}</h1>
+                                {activeNav === 'library' && (
+                                    <div className="flex space-x-3">
+                                        <button onClick={() => updateSetting('layout', settings.layout === 'grid' ? 'list' : 'grid')} className="p-2.5 bg-white dark:bg-[#1C1C1E] rounded-full shadow-sm bouncy-tap"><Icon.List s={20}/></button>
+                                        <button onClick={() => { setAddState(p => ({...p, open:true, tab: 'search', query: ''})); setBulkState({input:'', results:[], loading:false, preview:false}); }} className="p-2.5 bg-accent text-white rounded-full shadow-lg shadow-accent/50 bouncy-tap"><Icon.Plus s={20}/></button>
+                                    </div>
+                                )}
+                            </div>
+                            {activeNav === 'library' && (
+                                <div>
+                                    <div className="relative">
+                                        <Icon.Search s={18} c="absolute left-4 top-[12px] text-gray-400" />
+                                        <input type="text" placeholder="Search your vault..." value={internalQuery} onChange={e => setInternalQuery(e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] text-black dark:text-white rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:outline-none border border-black/5 dark:border-white/10 shadow-sm transition-all duration-300 focus:shadow-md" />
+                                    </div>
+                                    {globalTagFilter && (
+                                        <div className="mt-3 flex items-center animate-spring-pop">
+                                            <span className="inline-flex items-center bg-accent text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm"><Icon.Tag s={12} c="mr-1.5"/> {globalTagFilter}</span>
+                                            <button onClick={() => setGlobalTagFilter('')} className="ml-3 text-xs font-bold text-gray-500 underline bouncy-tap">Clear Filter</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </header>
+                    )}
+
+                    <main className="flex-1 overflow-y-auto hide-scrollbar pb-32" onScroll={handleScroll}>
+                        {/* EXPLORE PAGE */}
+                        {activeNav === 'explore' && (
+                            <div className="pb-10">
+                                {exploreData.trending.length > 0 && (
+                                    <div className="relative w-full h-[65vh] flex items-end p-6 cursor-pointer group bouncy-tap" onClick={() => openDetail(exploreData.trending[0])}>
+                                        <img src={exploreData.trending[0].backdrop || exploreData.trending[0].image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                        <div className="absolute inset-0 hero-gradient" />
+                                        <div className="relative z-10 w-full">
+                                            <div className="bg-red-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg inline-flex items-center mb-3 shadow-lg animate-pulse-glow"><Icon.Film s={12} c="mr-1"/> Trending Now</div>
+                                            <h2 className="text-4xl font-black text-white leading-tight mb-2 drop-shadow-2xl">{exploreData.trending[0].title}</h2>
+                                            <div className="flex gap-3 mt-4">
+                                                <button onClick={(e) => { e.stopPropagation(); openDetail(exploreData.trending[0]); }} className="flex-1 py-4 bg-white/20 backdrop-blur-xl text-white rounded-2xl font-black border border-white/20 bouncy-tap flex justify-center items-center"><Icon.Play s={20} fill="currentColor" c="mr-2"/> View</button>
+                                                <button onClick={(e) => { e.stopPropagation(); addToVaultFast(exploreData.trending[0]); }} className="w-14 bg-accent text-white rounded-2xl flex justify-center items-center shadow-lg shadow-accent/50 bouncy-tap"><Icon.Plus s={24}/></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {exploreLoading && exploreData.trending.length === 0 ? (
+                                    <div className="flex justify-center items-center h-40"><Icon.Loader s={40} c="text-accent" /></div>
+                                ) : (
+                                    <div className="px-6 mt-10 space-y-10">
+                                        {exploreData.popMovies?.length > 0 && <div><h3 className="font-black text-2xl mb-5 flex items-center"><Icon.Film s={24} c="mr-2 text-accent"/> Popular Movies</h3>{renderCardList(exploreData.popMovies)}</div>}
+                                        {exploreData.popTv?.length > 0 && <div><h3 className="font-black text-2xl mb-5 flex items-center"><Icon.Tv s={24} c="mr-2 text-indigo-500"/> Popular Series</h3>{renderCardList(exploreData.popTv)}</div>}
+                                        {exploreData.anime?.length > 0 && <div><h3 className="font-black text-2xl mb-5 flex items-center"><Icon.Sparkles s={24} c="mr-2 text-pink-500"/> Top Anime</h3>{renderCardList(exploreData.anime)}</div>}
+                                        
+                                        {exploreData.extras?.map((extraSec, idx) => (
+                                            <div key={idx}>
+                                                <h3 onClick={() => openGenreGrid(extraSec.title, extraSec.id, extraSec.type)} className="font-black text-2xl mb-5 flex items-center cursor-pointer bouncy-tap w-max hover:text-accent transition-colors">
+                                                    {extraSec.iconName && React.createElement(Icon[extraSec.iconName] || Icon.Film, { s: 24, c: "mr-2 " + extraSec.iconColor })} {extraSec.title} <Icon.ChevronL s={18} c="ml-2 rotate-180 opacity-50" />
+                                                </h3>
+                                                {renderCardList(extraSec.items)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* LIBRARY / VAULT PAGE */}
+                        {activeNav === 'library' && (
+                            <div className="px-6 pt-4 animate-spring-up">
+                                <div className="grid grid-cols-4 gap-2 mb-6">
+                                    {[ { id: 'all', l: 'All' }, { id: 'backlog', l: 'Backlog' }, { id: 'watching', l: 'Active' }, { id: 'completed', l: 'Done' } ].map(f => (
+                                        <button key={f.id} onClick={() => { haptic(); setFilterStatus(f.id); }} className={`py-2 text-[11px] font-black rounded-xl bouncy-tap ${filterStatus === f.id ? 'bg-accent text-white shadow-lg shadow-accent/40 scale-105' : 'bg-white dark:bg-[#1C1C1E] text-gray-500'}`}>
+                                            {f.l}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className={settings.layout === 'grid' ? "grid  gap-4" : "flex flex-col gap-4"}>
+                                    {renderVaultItems() /* replaced */ // original map((item, idx) => (
+                                        <SwipeCard key={item.id} item={item} onUpdate={syncUpdate} onDelete={deleteItem} onOpen={openDetail}>
+                                            {settings.layout === 'grid' ? (
+                                                <div className="flex flex-col h-full rounded-3xl relative animate-spring-up" style={{animationDelay: `${idx * 0.03}s`}}>
+                                                    {item.status === 'backlog' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent rounded-full border-2 border-white dark:border-[#151517] z-10 animate-pulse-glow"></div>}
+                                                    <div className="relative h-56 w-full bg-gray-200 dark:bg-[#1C1C1E] overflow-hidden rounded-t-3xl">
+                                                        {item.image ? <img src={item.image} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" /> : <div className="w-full h-full flex items-center justify-center">{getIcon(item.type, 40)}</div>}
+                                                    </div>
+                                                    <div className="p-4 flex-1 flex flex-col justify-between">
+                                                        <div><h3 className="font-black text-sm leading-tight line-clamp-2">{item.title}</h3><p className="text-[10px] text-gray-500 font-bold mt-1 uppercase">{item.year}</p></div>
+                                                        {item.soulRating > 0 && <div className="w-full bg-gray-200 dark:bg-gray-800 h-1.5 rounded-full mt-3 overflow-hidden"><div className="bg-gradient-to-r from-red-500 to-green-500 h-full transition-all duration-1000" style={{ width: `${item.soulRating}%` }}></div></div>}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex p-3 gap-4 w-full items-center rounded-3xl relative animate-spring-up" style={{animationDelay: `${idx * 0.03}s`}}>
+                                                    {item.status === 'backlog' && <div className="absolute top-2 left-2 w-3 h-3 bg-accent rounded-full border-2 border-white dark:border-[#151517] z-10 animate-pulse-glow"></div>}
+                                                    <div className="w-16 h-24 bg-gray-200 dark:bg-[#1C1C1E] rounded-[1.2rem] overflow-hidden flex-shrink-0 relative">
+                                                        {item.image ? <img src={item.image} loading="lazy" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">{getIcon(item.type, 24)}</div>}
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col justify-center pr-2">
+                                                        <h3 className="font-black text-base leading-tight line-clamp-1 mb-1">{item.title}</h3>
+                                                        <span className="text-xs text-gray-500 font-bold uppercase">{item.type} • {item.year}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </SwipeCard>
+                                    ))}
+                                    {filteredVault.length === 0 && <div className="col-span-2 text-center text-gray-400 font-bold mt-10 animate-spring-pop">Vault is empty. Add some artifacts.</div>}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PLAYLISTS / DECKS PAGE */}
+                        {activeNav === 'decks' && (
+                            <div className="px-6 space-y-4 pt-4 animate-spring-up">
+                                {!activeDeck ? (
+                                    <>
+                                        <div className="bg-white dark:bg-[#151517] p-5 rounded-3xl shadow-sm mb-6 flex space-x-3 border border-black/5 dark:border-white/5">
+                                            <input value={newPlaylistName} onChange={e => setNewPlaylistName(e.target.value)} placeholder="New playlist name..." className="flex-1 bg-gray-50 dark:bg-[#1C1C1E] px-4 py-3 rounded-2xl font-bold text-sm focus:outline-none transition-all duration-300 focus:shadow-md" />
+                                            <button onClick={() => { if(newPlaylistName.trim()) { setPlaylists(p => [...p, {id: Date.now(), name: newPlaylistName.trim(), icon: '📁', itemIds: []}]); setNewPlaylistName(''); haptic(); showToast("Playlist Created!"); } }} className="bg-accent text-white px-5 rounded-2xl font-black bouncy-tap shadow-lg shadow-accent/50">Add</button>
+                                        </div>
+
+                                        <div onClick={() => setActiveDeck({ name: "Highest Rated (Soul Meter)", icon: "🔥", itemIds: vault.filter(v=>v.soulRating>80).map(v=>v.id) })} className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-3xl p-5 flex items-center shadow-lg cursor-pointer bouncy-tap">
+                                            <span className="text-3xl mr-4">🔥</span><div><h3 className="font-black text-lg">Top Rated</h3><p className="text-xs font-bold opacity-80">Auto-generated</p></div>
+                                        </div>
+                                        
+                                        {playlists.map((pl, idx) => (
+                                            <div key={pl.id} onClick={() => setActiveDeck(pl)} className="bg-white dark:bg-[#151517] rounded-3xl p-5 flex items-center justify-between shadow-sm border border-black/5 dark:border-white/5 cursor-pointer bouncy-tap animate-spring-up" style={{animationDelay: `${idx * 0.05}s`}}>
+                                                <div className="flex items-center space-x-4"><span className="text-3xl">{pl.icon}</span><div><h3 className="font-black text-lg">{pl.name}</h3><p className="text-xs font-bold text-gray-500">{pl.itemIds.length} Items</p></div></div>
+                                                <button onClick={(e) => { e.stopPropagation(); setPlaylists(p => p.filter(x => x.id !== pl.id)); showToast("Playlist Deleted"); }} className="text-gray-400 hover:text-red-500 p-2 bouncy-tap"><Icon.Trash s={20}/></button>
+                                            </div>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <div className="animate-spring-up">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <div>
+                                                <button onClick={() => setActiveDeck(null)} className="flex items-center text-sm font-black text-gray-500 mb-2 bouncy-tap"><Icon.ChevronL s={20} c="mr-1"/> Back</button>
+                                                <h2 className="text-3xl font-black flex items-center">{activeDeck.icon} {activeDeck.name}</h2>
+                                            </div>
+                                            {!activeDeck.name.includes("Highest Rated") && (
+                                                <button onClick={() => { haptic(); setDeckPickerOpen(true); }} className="bg-accent text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-accent/50 bouncy-tap"><Icon.Plus s={24}/></button>
+                                            )}
+                                        </div>
+
+                                        <div className="grid  gap-4">
+                                            {activeDeck.itemIds.map(id => vault.find(v => v.id === id)).filter(Boolean).map(item => (
+                                                <div key={item.id} onClick={() => openDetail(item)} className="relative bg-gray-200 dark:bg-[#1C1C1E] h-56 rounded-3xl overflow-hidden shadow-sm bouncy-tap cursor-pointer">
+                                                    {item.image && <img src={item.image} className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/>}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent flex items-end p-4"><h3 className="text-white font-black text-sm truncate">{item.title}</h3></div>
+                                                </div>
+                                            ))}
+                                            {activeDeck.itemIds.length === 0 && <div className="col-span-2 text-center text-gray-500 font-bold mt-10">Playlist is empty. Tap the + button to add artifacts.</div>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* STATS PAGE */}
+                        {activeNav === 'stats' && (
+                            <div className="px-6 space-y-6 pt-4">
+                                <div className="bg-accent text-white p-6 rounded-[2rem] shadow-lg shadow-accent/50 relative overflow-hidden animate-spring-up">
+                                    <Icon.Chart s={120} c="absolute -right-6 -bottom-6 opacity-10 text-white"/>
+                                    <h3 className="font-black text-sm uppercase tracking-wider mb-1 opacity-80">Life Consumed</h3>
+                                    <div className="text-5xl font-black mb-2">{stats.days} <span className="text-xl">Days</span></div>
+                                    <p className="text-sm font-bold opacity-90">Total watch time across vault.</p>
+                                </div>
+                                <div className="grid  gap-4">
+                                    <div className="bg-white dark:bg-[#151517] rounded-3xl border border-black/5 dark:border-white/5 p-5 flex flex-col items-center justify-center shadow-sm animate-spring-pop" style={{animationDelay:"0.1s"}}><Icon.Check s={28} c="text-green-500 mb-2" /><span className="font-black text-3xl">{stats.comp}</span><span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Completed</span></div>
+                                    <div className="bg-white dark:bg-[#151517] rounded-3xl border border-black/5 dark:border-white/5 p-5 flex flex-col items-center justify-center shadow-sm animate-spring-pop" style={{animationDelay:"0.2s"}}><Icon.Collection s={28} c="text-purple-500 mb-2" /><span className="font-black text-3xl">{stats.total}</span><span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Total Vaulted</span></div>
+                                </div>
+                                {stats.topGenres.length > 0 && (
+                                    <div className="bg-white dark:bg-[#151517] rounded-3xl p-5 shadow-sm border border-black/5 dark:border-white/5 animate-spring-up" style={{animationDelay:"0.3s"}}>
+                                        <h3 className="font-black text-sm uppercase tracking-wider mb-5 flex items-center"><Icon.Sparkles s={18} c="mr-2 text-accent"/> Genre DNA</h3>
+                                        <div className="space-y-4">
+                                            {stats.topGenres.map((g, i) => {
+                                                const max = stats.topGenres[0][1];
+                                                const pct = (g[1]/max) * 100;
+                                                return (
+                                                    <div key={i}>
+                                                        <div className="flex justify-between text-xs font-bold mb-1.5"><span className="text-gray-700 dark:text-gray-300">{g[0]}</span><span className="text-gray-500">{g[1]}</span></div>
+                                                        <div className="w-full bg-gray-100 dark:bg-[#1C1C1E] h-2.5 rounded-full overflow-hidden"><div className="bg-accent h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${pct}%` }}></div></div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* EXTENDED SETTINGS PAGE */}
+                        {activeNav === 'settings' && (
+                            <div className="px-6 space-y-8 pt-4 pb-12 animate-spring-up">
+                                
+                                {/* DATA BACKUP & RESTORE */}
+                                <div>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 ml-2">Data Management</h3>
+                                    <div className="bg-white dark:bg-[#151517] rounded-[2rem] p-5 shadow-sm border border-black/5 dark:border-white/5 space-y-4">
+                                        <button onClick={exportData} className="w-full py-3 bg-accent/10 text-accent rounded-xl font-black bouncy-tap flex justify-center items-center"><Icon.Save s={18} c="mr-2"/> Export Vault Backup</button>
+                                        <div className="relative w-full">
+                                            <input type="file" accept=".json" onChange={importData} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <button className="w-full py-3 bg-gray-200 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 rounded-xl font-black flex justify-center items-center pointer-events-none"><Icon.Collection s={18} c="mr-2"/> Import Backup File</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* API MANAGER */}
+                                <div>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 ml-2">API Manager</h3>
+                                    <div className="bg-white dark:bg-[#151517] rounded-[2rem] p-5 shadow-sm border border-black/5 dark:border-white/5 space-y-4">
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">TMDB API Key (v3 Auth)</label>
+                                            <input type="password" value={apiTmdbInput} onChange={e => setApiTmdbInput(e.target.value)} placeholder="Leave blank for default" className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Trakt Client ID</label>
+                                            <input type="password" value={apiTraktInput} onChange={e => setApiTraktInput(e.target.value)} placeholder="Leave blank for default" className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Jikan API URL (Anime)</label>
+                                            <input type="text" value={settings.jikanUrl} onChange={e => updateSetting('jikanUrl', e.target.value)} placeholder="https://api.jikan.moe/v4" className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5" />
+                                        </div>
+                                        <button onClick={() => { updateSetting('tmdbKey', apiTmdbInput); updateSetting('traktKey', apiTraktInput); showToast("API Keys Saved!"); fetchExplore(true); }} className="w-full py-3 bg-accent text-white rounded-xl font-black bouncy-tap flex justify-center items-center"><Icon.Save s={18} c="mr-2"/> Save API Config</button>
+                                    </div>
+                                </div>
+
+                                {/* AI ORACLE */}
+                                <div>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 ml-2">Kernel AI (OpenRouter)</h3>
+                                    <div className="bg-white dark:bg-[#151517] rounded-[2rem] p-5 shadow-sm border border-black/5 dark:border-white/5 space-y-4">
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">API Key</label>
+                                            <div className="flex space-x-2">
+                                                <input type="password" value={aiInputKey} onChange={e => setAiInputKey(e.target.value)} placeholder="sk-or-v1-..." className="flex-1 bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5" />
+                                                <button onClick={() => { updateSetting('aiKey', aiInputKey); showToast("API Key Saved!"); }} className="bg-accent text-white px-5 rounded-xl font-black bouncy-tap">Save</button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Select Preset Model</label>
+                                            <select onChange={e => { if(e.target.value !== 'custom') setAiModelInput(e.target.value); }} className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5 appearance-none mb-2">
+                                                <option value="custom">-- Choose to Auto-Fill --</option>
+                                                {FREE_AI_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                            </select>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1 mt-3">Target Model ID (Customizable)</label>
+                                            <div className="flex space-x-2">
+                                                <input type="text" value={aiModelInput} onChange={e => setAiModelInput(e.target.value)} placeholder="e.g. meta-llama/llama-3.1-8b" className="flex-1 w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-accent/50" />
+                                                <button onClick={() => { updateSetting('aiModel', aiModelInput); showToast("Model Updated!"); }} className="bg-accent text-white px-5 rounded-xl font-black bouncy-tap">Set</button>
+                                            </div>
+                                        </div>
+                                        <button onClick={testAIConnection} className="w-full bg-gray-200 dark:bg-[#2C2C2E] py-3 rounded-xl text-xs font-black bouncy-tap">Test AI Connection</button>
+                                        {aiTestResult && <div className={`text-xs font-bold text-center mt-2 p-3 rounded-xl animate-spring-pop ${aiTestResult.includes('✅') ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>{aiTestResult}</div>}
+                                    </div>
+                                </div>
+
+                                {/* LOCALIZATION */}
+                                <div>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 ml-2">Localization</h3>
+                                    <div className="bg-white dark:bg-[#151517] rounded-[2rem] p-5 shadow-sm border border-black/5 dark:border-white/5 space-y-4">
+                                        <div className="flex gap-4">
+                                            <div className="flex-1">
+                                                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Region</label>
+                                                <select value={settings.region} onChange={e => { updateSetting('region', e.target.value); fetchExplore(true); }} className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5 appearance-none">
+                                                    {["US", "GB", "IN", "CA", "AU", "JP"].map(r => <option key={r} value={r}>{r}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Language</label>
+                                                <select value={settings.language} onChange={e => { updateSetting('language', e.target.value); fetchExplore(true); }} className="w-full bg-gray-50 dark:bg-[#1C1C1E] text-sm font-bold px-4 py-3 rounded-xl focus:outline-none border border-black/5 dark:border-white/5 appearance-none">
+                                                    {["en-US", "es-ES", "fr-FR", "de-DE", "ja-JP", "hi-IN"].map(l => <option key={l} value={l}>{l}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* TAB REORDERING */}
+                                <div>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 ml-2">Tab Management</h3>
+                                    <div className="bg-white dark:bg-[#151517] rounded-[2rem] p-4 shadow-sm border border-black/5 dark:border-white/5 space-y-2">
+                                        {settings.tabsOrder.map((tabId, idx) => {
+                                            const tabInfo = AVAILABLE_TABS.find(t => t.id === tabId);
+                                            return (
+                                                <div key={tabId} className="flex justify-between items-center bg-gray-50 dark:bg-[#1C1C1E] p-3 rounded-xl border border-black/5 dark:border-white/5">
+                                                    <div className="flex items-center">{React.createElement(tabInfo.i, {s: 18, c: "mr-3 text-gray-400"})}<span className="font-bold text-sm">{tabInfo.l}</span></div>
+                                                    <div className="flex space-x-2">
+                                                        <button onClick={() => moveTab(idx, 'up')} disabled={idx===0} className={`p-1.5 rounded-lg ${idx===0 ? 'opacity-20' : 'bg-gray-200 dark:bg-[#2C2C2E] bouncy-tap'}`}><Icon.ChevronU s={16}/></button>
+                                                        <button onClick={() => moveTab(idx, 'down')} disabled={idx===settings.tabsOrder.length-1} className={`p-1.5 rounded-lg ${idx===settings.tabsOrder.length-1 ? 'opacity-20' : 'bg-gray-200 dark:bg-[#2C2C2E] bouncy-tap'}`}><Icon.ChevronD s={16}/></button>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* SYSTEM CONTROLS */}
+                                <div>
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 ml-2">System Controls</h3>
+                                    <div className="bg-white dark:bg-[#151517] rounded-[2rem] border border-black/5 dark:border-white/5 overflow-hidden shadow-sm">
+                                        <div className="p-5 border-b border-black/5 dark:border-white/5 flex justify-between items-center cursor-pointer bouncy-tap" onClick={() => { updateSetting('adult', !settings.adult); fetchExplore(true); }}>
+                                            <span className="font-bold text-sm">Allow Adult Content (TMDB)</span>
+                                            <div className={`w-12 h-7 rounded-full transition-colors duration-300 ${settings.adult ? 'bg-accent' : 'bg-gray-200 dark:bg-[#2C2C2E]'} relative`}><div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform duration-300 ${settings.adult ? 'translate-x-6' : 'translate-x-1'}`}></div></div>
+                                        </div>
+                                        <div className="p-5 flex justify-between items-center cursor-pointer bouncy-tap" onClick={() => updateSetting('theme', settings.theme === 'dark' ? 'light' : 'dark')}>
+                                            <span className="font-bold text-sm">Theme Mode ({settings.theme === 'dark' ? 'Black' : 'White'})</span>
+                                            <div className={`w-12 h-7 rounded-full transition-colors duration-300 ${settings.theme === 'dark' ? 'bg-accent' : 'bg-gray-200 dark:bg-[#2C2C2E]'} relative`}><div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform duration-300 ${settings.theme === 'dark' ? 'translate-x-6' : 'translate-x-1'}`}></div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* DYNAMIC HIDABLE BOTTOM TABS */}
+                    <div className={`absolute bottom-0 w-full h-[90px] bg-[#F2F2F7]/90 dark:bg-[#000000]/90 backdrop-blur-[40px] border-t border-black/5 dark:border-white/5 flex justify-around items-center px-2 pb-5 z-20 transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+                        {settings.tabsOrder.map(tabId => {
+                            const t = AVAILABLE_TABS.find(a => a.id === tabId);
+                            return (
+                                <button key={t.id} onClick={() => { haptic(); setActiveNav(t.id); }} className={`flex flex-col items-center justify-center space-y-1 w-[60px] bouncy-tap transition-colors duration-300 ${activeNav === t.id ? 'text-accent scale-110' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+                                    {React.createElement(t.i, {s: 24})}<span className="text-[10px] font-bold">{t.l}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* CATEGORY / GENRE DEEP DIVE MODAL */}
+                    {activeGrid && (
+                        <div className="absolute inset-0 z-[70] bg-[#F2F2F7] dark:bg-[#0A0A0C] flex flex-col animate-spring-up">
+                            <header className="pt-14 pb-4 px-6 glass-panel sticky top-0 z-20 flex items-center shadow-sm">
+                                <button onClick={() => setActiveGrid(null)} className="w-10 h-10 bg-white dark:bg-[#1C1C1E] border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center shadow-sm bouncy-tap mr-4"><Icon.ChevronL s={20} /></button>
+                                <h2 className="text-2xl font-black">{activeGrid.title}</h2>
+                            </header>
+                            <main className="flex-1 overflow-y-auto px-6 py-6 pb-32 hide-scrollbar">
+                                {activeGrid.loading ? (
+                                    <Icon.Loader s={40} c="mx-auto text-accent mt-10"/>
+                                ) : activeGrid.error ? (
+                                    <p className="text-center font-bold text-gray-500 mt-10">Couldn't load genre selection.</p>
+                                ) : (
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {activeGrid.items.map((item, idx) => (
+                                            <div key={idx} onClick={() => openDetail(item)} className="cursor-pointer bouncy-tap animate-spring-up" style={{animationDelay: `${idx * 0.05}s`}}>
+                                                <div className="h-36 bg-gray-200 dark:bg-[#1C1C1E] rounded-[1.2rem] overflow-hidden mb-2 shadow-sm border border-black/5 dark:border-white/5 relative">
+                                                    {item.image ? <img src={item.image} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/> : <div className="w-full h-full flex justify-center items-center"><Icon.Film s={24} c="text-gray-400"/></div>}
+                                                </div>
+                                                <p className="text-[10px] font-bold text-center leading-tight line-clamp-2 px-1">{item.title}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </main>
+                        </div>
+                    )}
+
+                    {/* VAULT PICKER MODAL FOR PLAYLISTS */}
+                    <div className={`absolute inset-0 z-[65] flex flex-col justify-end transition-all duration-400 ${deckPickerOpen ? 'visible' : 'invisible'}`}>
+                        <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-400 ${deckPickerOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setDeckPickerOpen(false)} />
+                        <div className={`bg-[#F2F2F7] dark:bg-[#0A0A0C] w-full h-[80vh] rounded-t-[2.5rem] shadow-2xl relative z-10 flex flex-col transition-transform duration-500 ease-out ${deckPickerOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                            <div className="flex justify-between items-center p-6 border-b border-black/5 dark:border-white/5"><h3 className="font-black text-xl">Add to {activeDeck?.name}</h3><button onClick={() => setDeckPickerOpen(false)} className="bg-gray-200 dark:bg-[#1C1C1E] p-2 rounded-full bouncy-tap"><Icon.X s={20}/></button></div>
+                            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                                {vault.map(item => {
+                                    const isInDeck = activeDeck?.itemIds.includes(item.id);
+                                    return (
+                                        <div key={item.id} onClick={() => {haptic();setPlaylists(p => p.map(x => x.id === activeDeck.id ? { ...x, itemIds: isInDeck ? x.itemIds.filter(id => id !== item.id) : [...x.itemIds, item.id] } : x));setActiveDeck(prev => ({...prev, itemIds: isInDeck ? prev.itemIds.filter(id => id !== item.id) : [...prev.itemIds, item.id]}));}} className={`flex items-center p-3 rounded-2xl border cursor-pointer bouncy-tap ${isInDeck ? 'bg-accent/10 border-accent/30' : 'bg-white dark:bg-[#151517] border-black/5 dark:border-white/5'}`}>
+                                            <img src={item.image} className="w-10 h-14 object-cover rounded-lg mr-4 bg-gray-200 dark:bg-[#1C1C1E]" />
+                                            <span className="flex-1 font-black text-sm">{item.title}</span>
+                                            {isInDeck ? <Icon.Check s={20} c="text-accent" /> : <Icon.Plus s={20} c="text-gray-300" />}
+                                        </div>
+                                    )
+                                })}
+                                {vault.length === 0 && <p className="text-center font-bold text-gray-500 mt-10">Vault is empty.</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ADD / SEARCH MODAL */}
+                    <div className={`absolute inset-0 z-[60] flex flex-col justify-end transition-all duration-400 ${addState.open ? 'visible' : 'invisible'}`}>
+                        <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-400 ${addState.open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setAddState(p => ({...p, open: false}))} />
+                        <div className={`bg-[#F2F2F7] dark:bg-[#0A0A0C] w-full h-[90vh] rounded-t-[2.5rem] shadow-2xl relative z-10 flex flex-col transition-transform duration-500 ease-out ${addState.open ? 'translate-y-0' : 'translate-y-full'}`}>
+                            <div className="flex p-4 mt-2 mx-6 bg-gray-200 dark:bg-[#1C1C1E] rounded-2xl mb-4">
+                                {[ { id: 'search', l: 'Global' }, { id: 'ai', l: 'AI Finder' }, { id: 'bulk', l: 'Bulk Paste' } ].map(t => (
+                                    <button key={t.id} onClick={() => { setAddState(p => ({...p, tab: t.id, query: '', results: []})); setBulkState({input:'', results:[], loading:false, preview:false}); }} className={`flex-1 py-2 text-xs font-black rounded-xl bouncy-tap transition-all ${addState.tab === t.id ? 'bg-white dark:bg-[#2C2C2E] shadow-sm scale-105' : 'text-gray-500'}`}>
+                                        {t.l}
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <div className="px-6 flex-1 flex flex-col overflow-hidden">
+                                {/* BULK TAB */}
+                                {addState.tab === 'bulk' && (
+                                    <div className="flex flex-col h-full animate-spring-up">
+                                        {!bulkState.preview ? (
+                                            <>
+                                                <textarea value={bulkState.input} onChange={e => setBulkState(p => ({...p, input: e.target.value}))} placeholder="Interstellar&#10;Naruto&#10;The Matrix (1999)..." className="flex-1 w-full bg-white dark:bg-[#151517] p-4 rounded-3xl resize-none text-sm font-bold focus:outline-none mb-4 shadow-sm border border-black/5 dark:border-white/5"></textarea>
+                                                <button onClick={processBulkImport} disabled={bulkState.loading} className="w-full py-4 bg-accent text-white rounded-2xl font-black mb-8 bouncy-tap">
+                                                    {bulkState.loading ? <Icon.Loader s={20} c="mx-auto"/> : "Process Import"}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col h-full pb-8">
+                                                <div className="flex-1 overflow-y-auto space-y-2 hide-scrollbar mb-4">
+                                                    {bulkState.results.map((r, i) => (
+                                                        <div key={i} className="flex items-center p-3 bg-white dark:bg-[#151517] rounded-xl text-sm font-bold shadow-sm animate-spring-up" style={{animationDelay: `${i * 0.05}s`}}>
+                                                            {r.success ? <Icon.Check s={16} c="text-green-500 mr-2"/> : <Icon.X s={16} c="text-red-500 mr-2"/>}
+                                                            <span className="flex-1 truncate">{r.success ? r.item.title : r.original}</span>
+                                                            <span className="text-[10px] uppercase text-gray-500">{r.success ? r.item.type : 'Failed'}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex gap-3">
+                                                    <button onClick={() => setBulkState(p=>({...p, preview:false}))} className="w-14 py-4 bg-gray-200 dark:bg-[#2C2C2E] rounded-2xl flex justify-center bouncy-tap"><Icon.ChevronL s={20}/></button>
+                                                    <button onClick={commitBulkImport} className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-black bouncy-tap">Commit Valid Items</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* SEARCH & AI TAB */}
+                                {(addState.tab === 'search' || addState.tab === 'ai') && (
+                                    <>
+                                        <div className="relative mb-6 animate-spring-up">
+                                            {addState.tab === 'ai' ? <Icon.Sparkles s={20} c="absolute left-5 top-[18px] text-purple-500" /> : <Icon.Search s={20} c="absolute left-5 top-[18px] text-gray-400" />}
+                                            <input type="text" placeholder={addState.tab === 'ai' ? "e.g. Space movies that make you cry" : "Search database e.g. Matrix (1999)..."} autoFocus value={addState.query} onChange={(e) => setAddState(p => ({...p, query: e.target.value}))} className="w-full bg-white dark:bg-[#151517] text-black dark:text-white rounded-[2rem] py-4 pl-14 pr-6 text-sm font-bold focus:outline-none shadow-sm border border-black/5 dark:border-white/5 transition-all duration-300 focus:shadow-md" />
+                                            {addState.tab === 'ai' && <button onClick={runSmartSearch} className="absolute right-2 top-2 bg-purple-500 text-white px-4 py-2.5 rounded-3xl text-xs font-black shadow-sm bouncy-tap">Ask</button>}
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto pb-10 hide-scrollbar -mx-2 px-2">
+                                            {addState.loading && <Icon.Loader s={32} c="text-accent mx-auto mt-10"/>}
+                                            <div className="grid gap-3">
+                                                {addState.results.map((res, i) => {
+                                                    const inVault = vault.some(v => v.aid === res.aid); 
+                                                    const CatInfo = CATEGORIES.find(c => c.id === res.type) || CATEGORIES[0];
+                                                    return (
+                                                        <div key={res.id} onClick={() => { !inVault && openDetail(res) }} className={`flex items-center p-3 rounded-3xl bg-white dark:bg-[#151517] shadow-sm border border-black/5 dark:border-white/5 cursor-pointer animate-spring-up ${inVault ? 'opacity-50' : 'bouncy-tap'}`} style={{animationDelay: `${i * 0.05}s`}}>
+                                                            <div className="w-14 h-20 bg-gray-100 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden flex-shrink-0 mr-4">
+                                                                {res.image ? <img src={res.image} className="w-full h-full object-cover"/> : <div className="w-full h-full flex justify-center items-center">{React.createElement(CatInfo.i, {s: 24, c: CatInfo.c})}</div>}
+                                                            </div>
+                                                            <div className="flex-1 overflow-hidden">
+                                                                <h4 className="font-black text-sm truncate">{res.title}</h4>
+                                                                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg inline-block mt-1 ${CatInfo.b} ${CatInfo.c}`}>{res.type} • {res.year}</span>
+                                                            </div>
+                                                            <div className="pr-4">{inVault ? <Icon.Check s={24} c="text-green-500" /> : <Icon.Plus s={24} c="text-gray-300 dark:text-white" />}</div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* DEEP DETAIL MODAL */}
+                    <div className={`absolute inset-0 z-[70] bg-[#F2F2F7] dark:bg-[#0A0A0C] flex flex-col transition-all duration-500 ease-out ${viewingItem ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
+                        {renderSafeModal()}
+                    </div>
+
+                    {/* ACTOR PROFILE MODAL */}
+                    {actorProfile && (
+                        <div className="absolute inset-0 z-[80] bg-black/60 backdrop-blur-md flex flex-col justify-end transition-opacity duration-300">
+                            <div className="bg-[#F2F2F7] dark:bg-[#0A0A0C] w-full h-[85vh] rounded-t-[2.5rem] shadow-2xl relative flex flex-col pt-6 px-6 animate-spring-up">
+                                <button onClick={() => setActorProfile(null)} className="absolute top-4 right-6 bg-gray-200 dark:bg-[#1C1C1E] p-2 rounded-full bouncy-tap z-10"><Icon.X s={20}/></button>
+                                {actorProfile.loading ? (
+                                    <Icon.Loader s={40} c="m-auto text-accent"/>
+                                ) : (
+                                    <div className="flex-1 overflow-y-auto hide-scrollbar pb-10 mt-6">
+                                        <div className="flex items-center space-x-5 mb-6 animate-spring-up">
+                                            <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-[#1C1C1E] border border-black/5 dark:border-white/5 flex-shrink-0">{actorProfile.image && <img src={actorProfile.image} className="w-full h-full object-cover"/>}</div>
+                                            <div><h2 className="text-2xl font-black mb-1">{actorProfile.name}</h2><span className="text-xs font-bold text-gray-500 uppercase">Actor Profile</span></div>
+                                        </div>
+                                        
+                                        <ExpandableText text={actorProfile.bio} maxChars={220} />
+                                        
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-4 animate-spring-up" style={{animationDelay:"0.2s"}}>Known For</h3>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {actorProfile.knownFor?.map((k, i) => (
+                                                <div key={i} onClick={() => { setActorProfile(null); openDetail(k); }} className="cursor-pointer bouncy-tap animate-spring-up" style={{animationDelay: `${0.2 + (i * 0.05)}s`}}>
+                                                    <div className="h-32 bg-gray-200 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden mb-2 border border-black/5 dark:border-white/5">{k.image && <img src={k.image} className="w-full h-full object-cover"/>}</div>
+                                                    <p className="text-[10px] font-bold text-center truncate">{k.title}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
+    </script>
+</body></html>
